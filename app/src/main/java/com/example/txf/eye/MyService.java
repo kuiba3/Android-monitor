@@ -80,13 +80,18 @@ public class MyService extends Service {
             else{
                 JSONObject dataj = (JSONObject)data;
                 int length = dataj.length();
-                out.write((length + "").getBytes());
+
+                JSONObject len = new JSONObject();
+                len.put("length",length);
+                out.write(len.toString().getBytes());
                 out.flush();
+                Thread.sleep(100);
 
                 Iterator iterator = dataj.keys();
                 while (iterator.hasNext()){
                     String key = iterator.next().toString();
                     send_data = dataj.getString(key);
+                    Thread.sleep(100);
                     out.write(send_data.getBytes());
                     out.flush();
                 }
