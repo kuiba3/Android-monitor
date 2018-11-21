@@ -104,6 +104,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         sInstance = null;
+        Log.d("结束","结束了");
     }
 
     /**
